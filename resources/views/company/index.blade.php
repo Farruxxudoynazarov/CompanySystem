@@ -11,7 +11,8 @@
             <div class="flex items-center">
                 <h2
                     class="text-2xl font-bold mb-2 text-left bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Companies list</h2>
+                    Companies list
+                </h2>
             </div>
             <div class="text-end">
 
@@ -102,7 +103,7 @@
                                             class="mr-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                                             Edit
                                         </a>
-                                   
+
                                         @can('delete companies')
                                         <form action="{{ route('company.destroy', $company->id) }}" method="POST"
                                             onsubmit="return confirm('O\'chirilsinmi?');" class="d-flex">
