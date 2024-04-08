@@ -1,12 +1,12 @@
 <?php
 
 namespace Database\Seeders;
-
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+// 
+// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-// use App\Models\Role;
+// use App\Models\Role;/
 use Spatie\Permission\Models\Role;
-use App\Models\User;
+// use App\Models\User;
 use Spatie\Permission\Models\Permission;
 
 
@@ -51,13 +51,9 @@ class RoleSeeder extends Seeder
             'create own employees', 
             'view employees',
         ]);
-        // Role::findByName('admin')->givePermissionTo('create employee')
+        
 
-        // Birinchi foydalanuvchiga admin rolini berish
-     
-
-
-
+ 
 
             // Company rol va uning ruxsatlarini yaratish 
             

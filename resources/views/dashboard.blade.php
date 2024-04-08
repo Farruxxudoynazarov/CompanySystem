@@ -4,7 +4,6 @@
             {{ __('Dashboard') }}
         </h2>
 
-        <!-- Tugmalar -->
         <div class="mt-4">
             <button id="adminButton" class="px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md">
                 {{ __('Administrator') }}
@@ -17,21 +16,14 @@
                 {{ __('Employee') }}
             </a>
 
-            <!-- Bu div faqat adminButton bosilganda ko'rinadi -->
-            {{-- <div id="adminOptions" class="hidden mt-4">
-                <a href="{{ route('admin.index') }}" class="px-4 py-2 bg-green-500 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md">
-                    {{ __('Users') }}
-                </a>
-                <a href="#" class="px-4 py-2 ml-3 bg-purple-500 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-md">
-                    {{ __('Roles') }}
-                </a>
-            </div> --}}
+           
         </div>
     </x-slot>
 
     <div class="py-12">
-        <!-- Asosiy kontent -->
+
         @yield('crud')
+    
     </div>
 </x-app-layout>
 

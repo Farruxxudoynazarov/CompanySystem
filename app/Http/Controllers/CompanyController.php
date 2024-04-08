@@ -5,26 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
-
-
-
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
+use App\Http\Requests\StoreCompanyRequest;
+use App\Http\Requests\UpdateCompanyRequest;
+use Illuminate\Console\Command;
 
 class CompanyController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-
-//      public function __construct()
-// {
-//     $this->middleware('permission:view companies', ['only' => ['index', 'show']]);
-//     $this->middleware('permission:create companies', ['only' => ['create', 'store']]);
-//     $this->middleware('permission:edit companies|view edit own company', ['only' => ['edit', 'update']]);
-//     $this->middleware('permission:delete companies', ['only' => ['destroy']]);
-// }
-
-
 
 
     public function index()
@@ -36,8 +28,7 @@ class CompanyController extends Controller
         // Company uchun faqat o'z kompaniyasi
         $companies = Auth::user()->company()->get();
     } else {
-        // Agar foydalanuvchi hech qanday roliga ega bo'lmasa yoki boshqa holatlar
-        // Bu yerda xato qaytarish yoki bo'sh natija qaytarish mumkin
+        // Agar foydalanuvchi hech qanday roliga ega bo'lmasa bosh qolaid
         $companies = collect();
     }
 
@@ -50,8 +41,10 @@ class CompanyController extends Controller
      */
     public function create()
     {
-        
-        
+
+        if(!auth()->user()->can('create companies')){
+            abort(403);
+        }
 
             return view('company.create');
     
@@ -63,22 +56,26 @@ class CompanyController extends Controller
      */
 
 
-    public function store(Request $request)
-    {
-        
-        $validated = $request->validate([
-            'name' => 'required',
-            'director_name' => 'required',
-            'address' => 'required',
-            'email' => 'required|email',
-            'website' => 'required',
-            'phone' => 'required|max:255'
-        ]);
-        
-        $company = Company::create($validated);
-
-        return redirect()->route('company.index')->with('success', 'Kompaniya muvaffaqiyatli qoshildi');
-    }
+     public function store(StoreCompanyRequest $request)
+     {
+         $validated= $request->validated();
+     
+         $company = Company::create($validated);
+     
+         // Kompaniya uchun foydalanuvchi company role ni  yaratish
+         $user = User::create([
+             'name' => $validated['name'],
+             'email' => $validated['email'],
+             'password' => Hash::make($request->password),
+             'company_id' => $company->id,
+         ]);
+     
+         // "company" nomli rolni topishh va foydalanuvchiga bu rolni berish
+         $companyRole = Role::firstOrCreate(['name' => 'company', 'guard_name' => 'web']);
+         $user->assignRole($companyRole);
+     
+         return redirect()->route('company.index')->with('success', 'Kompaniya muvaffaqiyatli qo\'shildi');
+     }
 
     /**
      * Display the specified resource.
@@ -98,43 +95,37 @@ class CompanyController extends Controller
     {
 
 
-        $company = Company::findOrFail($id);
-        $company = Auth::user()->company; // Agar har bir company faqat bitta user bilan bog'langan bo'lsa
-
-        // if (!auth()->user()->can('edit own company') || auth()->user()->company->id != $company->id) {
-        //     abort(403);
-        // }
+        $user = Auth::user();
+        if($user->hasRole('admin') || $user->hasRole('company') ){
+            $company = Company::findOrFail($id);        
+        }
+        else {
+            abort(403, 'sizda bu amalni bajarish ruxsati yoq'); 
+        }
         return view('company.edit', compact('company'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(UpdateCompanyRequest $request, string $id)
     {
-        // Kiruvchi ma'lumotlarni validatsiya qilish
-        $validated = $request->validate([
-            'name' => 'required',
-            'director_name' => 'required',
-            'address' => 'required',
-            'email' => 'required|email',
-            'website' => 'required',
-            'phone' => 'required|max:255'
-        ]);
+       $validated = $request->validated();
     
-        // Joriy foydalanuvchining kompaniyasini olish
-        $company = Auth::user()->company;
-    
-        // Agar joriy foydalanuvchining kompaniyasi IDsi so'rov IDsi bilan mos kelmasa, 403 xato qaytarish
-        if ($company->id != $id) {
-            abort(403, 'Unauthorized action.');
+       if(Auth::user()->hasRole('admin')){
+        $company = Company::findOrFail($id);
+       }
+       else {
+        $company =  Auth::user()->company;
+        
+        if($company->id !=$id){
+            abort(403, 'Siz bu kompaniyani yangilash huquqiga ega emasisz');
         }
-    
-        // Foydalanuvchi kompaniyasini yangilash
-        $company->update($validated);
-    
-        // Muaffaqiyatli yangilanganidan so'ng, kompaniyalar ro'yxatiga qaytish
-        return redirect()->route('company.index')->with('success', 'Company updated successfully');
+    }
+    $company->update($validated);
+
+    return redirect()->route('company.index')->with('succes', 'Kompaniya muvaffaqiyatli yangilandi');
+
     }
     
 
@@ -143,27 +134,19 @@ class CompanyController extends Controller
      */
     public function destroy(string $id)
 {
-    // Mavjud bo'lgan kompaniyani topish
     $company = Company::findOrFail($id);
 
-    // Foydalanuvchining kompaniyaga ega ekanligini tekshirish
-    if (auth()->user()->company_id != $company->id) {
-        // Agar foydalanuvchi kompaniyaning egasi bo'lmasa, 403 xato qaytarish
-        abort(403, 'You are not authorized to delete this company.');
+    if(!Auth::user()->hasRole('admin') && Auth::user()->company_id != $company->id){
+        abort(403, 'Bu kompaniyani o\'chirishga ruxsatiz yo\'q');
     }
 
-    // Kompaniyani o'chirish
     $company->delete();
 
-    // Kompaniya muvaffaqiyatli o'chirilgandan so'ng, kompaniyalar ro'yxatiga qaytish
-    return redirect()->route('company.index')->with('success', 'Company deleted successfully.');
+    return redirect()->route('company.index')->with('success', 'Kompaniya muvaffaqiyatli o\'chirildi');
+    
 }
 
 
-    public function editProfile()
-{
-    $company = auth()->user()->company; // Foydalanuvchiga tegishli kompaniyani olish
-    return view('company.profile.edit', compact('company')); // Kompaniya profilini tahrirlash ko'rinishini ko'rsatish
-}
+   
 
 }
